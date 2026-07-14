@@ -1,0 +1,1001 @@
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  Instagram, Facebook, Youtube, MessageCircle, Menu, X, Star,
+  Lock, LogOut, Plus, Trash2, Pencil, Save, ChevronRight, Sparkles, Mail
+} from "lucide-react";
+
+/* ---------------------------------- THEME ---------------------------------- */
+const C = {
+  bg: "#FFFFFF",
+  text: "#171717",
+  sub: "#4A4A4A",
+  pistaLight: "#EEF6E4",
+  pista: "#9BC77C",
+  pistaDeep: "#6E9F53",
+  line: "#E4E9DD",
+};
+
+const FONTS_URL =
+  "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Poppins:wght@300;400;500;600;700&display=swap";
+
+const STORAGE_KEY = "focus_site_data_v1";
+
+const SERVICES = [
+  { id: "makeup", name: "Bridal & Party Makeup", tag: "Makeup", blurb: "Skin-first bridal, party and editorial makeup." },
+  { id: "mehendi", name: "Mehendi Art", tag: "Mehendi", blurb: "Bridal and guest mehendi, traditional to contemporary." },
+  { id: "sarees", name: "Sarees & Draping", tag: "Sarees", blurb: "Curated saree rentals with expert draping." },
+  { id: "photography", name: "Photography", tag: "Photography", blurb: "Candid, portrait and event photography." },
+  { id: "studio", name: "Studio Rental", tag: "Studio Rental", blurb: "A fully equipped photography studio, by the hour." },
+  { id: "decor", name: "Decoration", tag: "Decoration", blurb: "Stage, mandap and venue decor for every occasion." },
+  { id: "catering", name: "Food Catering", tag: "Catering", blurb: "Full-service catering for weddings and events." },
+];
+
+const DEFAULT_IMG = {
+  makeup: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80&auto=format&fit=crop",
+  mehendi: "https://images.unsplash.com/photo-1610116306796-6fea9f4fac3c?w=800&q=80&auto=format&fit=crop",
+  sarees: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&q=80&auto=format&fit=crop",
+  photography: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80&auto=format&fit=crop",
+  studio: "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=800&q=80&auto=format&fit=crop",
+  decor: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80&auto=format&fit=crop",
+  catering: "https://images.unsplash.com/photo-1555244162-803834f70033?w=800&q=80&auto=format&fit=crop",
+};
+
+const WHATSAPP_NUMBER = "919393664445";
+
+const defaultData = () => ({
+  admin: null, // { username, password } — set on first run
+  socials: {
+    instagram: "https://instagram.com/focus",
+    facebook: "https://facebook.com/focus",
+    youtube: "https://youtube.com/@focus",
+    whatsapp: `https://wa.me/${WHATSAPP_NUMBER}`,
+    email: "enquiries@focus.com",
+  },
+  projects: SERVICES.flatMap((s, i) => ([
+    { id: `${s.id}-1`, service: s.id, title: `${s.tag} — Feature Work`, image: DEFAULT_IMG[s.id], desc: "Sample project. Replace from the admin panel." },
+    { id: `${s.id}-2`, service: s.id, title: `${s.tag} — Recent Project`, image: DEFAULT_IMG[s.id], desc: "Sample project. Replace from the admin panel." },
+  ])),
+  testimonials: [
+    { id: "t1", name: "Ananya R.", text: "Focus handled our whole wedding — makeup, mehendi, decor, food. One call and it was all sorted.", rating: 5 },
+    { id: "t2", name: "Kiran M.", text: "Rented the studio for a shoot and the team also helped with lighting. Super smooth experience.", rating: 5 },
+    { id: "t3", name: "Priya S.", text: "The mehendi work was stunning and the photographer captured every detail beautifully.", rating: 4 },
+  ],
+  enquiries: [],
+});
+
+/* ---------------------------------- STORAGE HELPERS ---------------------------------- */
+async function loadData() {
+  try {
+    const res = await window.storage.get(STORAGE_KEY, true);
+    if (res && res.value) return JSON.parse(res.value);
+  } catch (e) {
+    /* key not found yet */
+  }
+  return defaultData();
+}
+async function saveData(data) {
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(data), true);
+  } catch (e) {
+    console.error("Storage save failed", e);
+  }
+}
+
+/* ---------------------------------- DECORATIVE DIVIDER (signature element) ---------------------------------- */
+function MehendiDivider() {
+  return (
+    <div className="w-full flex justify-center py-2" aria-hidden="true">
+      <svg width="260" height="20" viewBox="0 0 260 20" fill="none">
+        <path
+          d="M2 10 C 30 -4, 50 24, 80 10 S 130 -4, 160 10 S 210 24, 258 10"
+          stroke={C.pista}
+          strokeWidth="2"
+          fill="none"
+        />
+        <circle cx="2" cy="10" r="3" fill={C.pistaDeep} />
+        <circle cx="80" cy="10" r="3" fill={C.pistaDeep} />
+        <circle cx="160" cy="10" r="3" fill={C.pistaDeep} />
+        <circle cx="258" cy="10" r="3" fill={C.pistaDeep} />
+      </svg>
+    </div>
+  );
+}
+
+function AnimatedMehendiDivider() {
+  return (
+    <div className="w-full flex justify-center py-2" aria-hidden="true">
+      <svg width="260" height="20" viewBox="0 0 260 20" fill="none">
+        <path
+          d="M2 10 C 30 -4, 50 24, 80 10 S 130 -4, 160 10 S 210 24, 258 10"
+          stroke={C.pista}
+          strokeWidth="2"
+          fill="none"
+          strokeDasharray="300"
+          strokeDashoffset="300"
+          style={{ animation: "drawLine 1.1s ease-out 1.4s forwards" }}
+        />
+        <circle cx="2" cy="10" r="3" fill={C.pistaDeep} className="fade-up" style={{ animationDelay: "2.4s" }} />
+        <circle cx="80" cy="10" r="3" fill={C.pistaDeep} className="fade-up" style={{ animationDelay: "2.5s" }} />
+        <circle cx="160" cy="10" r="3" fill={C.pistaDeep} className="fade-up" style={{ animationDelay: "2.6s" }} />
+        <circle cx="258" cy="10" r="3" fill={C.pistaDeep} className="fade-up" style={{ animationDelay: "2.7s" }} />
+      </svg>
+    </div>
+  );
+}
+
+/* ---------------------------------- FLOATING WHATSAPP WIDGET ---------------------------------- */
+function WhatsAppWidget({ number }) {
+  const [open, setOpen] = useState(false);
+  const link = number && number.startsWith("http") ? number : `https://wa.me/${WHATSAPP_NUMBER}`;
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+      {open && (
+        <div
+          className="w-72 rounded-2xl overflow-hidden border shadow-xl"
+          style={{ borderColor: C.line, background: "#fff", animation: "popIn 0.2s ease-out" }}
+        >
+          <div className="px-4 py-3 flex items-center gap-2" style={{ background: C.pistaDeep }}>
+            <MessageCircle size={18} color="#fff" />
+            <span className="text-sm font-semibold text-white">Chat with Focus</span>
+            <button onClick={() => setOpen(false)} className="ml-auto text-white/80 hover:text-white">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="p-4">
+            <p className="text-sm mb-3" style={{ color: C.sub }}>
+              Hi! Have a question about makeup, mehendi, sarees, photography, the studio, decor or catering?
+              Message us directly on WhatsApp.
+            </p>
+            <a
+              href={link}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full font-semibold text-sm"
+              style={{ background: C.pista, color: C.text }}
+            >
+              <MessageCircle size={16} /> Open WhatsApp
+            </a>
+          </div>
+        </div>
+      )}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Chat on WhatsApp"
+        className="whatsapp-pulse w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
+        style={{ background: "#25D366", animation: "pulseRing 2.2s infinite" }}
+      >
+        <MessageCircle size={26} color="#fff" fill="#fff" />
+      </button>
+    </div>
+  );
+}
+
+const INTRO_WORDS = ["FOCUS", "Mehndi Art", "Beauty", "Sarees", "Photography", "Rental Studio", "Decoration", "Food Caterings", "FOCUS"];
+
+function IntroScreen({ onComplete }) {
+  const [index, setIndex] = useState(0);
+  const [leaving, setLeaving] = useState(false);
+  const WORD_MS = 550;
+
+  useEffect(() => {
+    if (index >= INTRO_WORDS.length - 1) {
+      const t = setTimeout(() => setLeaving(true), WORD_MS);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => setIndex((i) => i + 1), WORD_MS);
+    return () => clearTimeout(t);
+  }, [index]);
+
+  useEffect(() => {
+    if (!leaving) return;
+    const t = setTimeout(onComplete, 550);
+    return () => clearTimeout(t);
+  }, [leaving, onComplete]);
+
+  return (
+    <div
+      className="fixed inset-0 flex flex-col items-center justify-center"
+      style={{
+        background: "#fff",
+        zIndex: 100,
+        transition: "opacity 0.55s ease",
+        opacity: leaving ? 0 : 1,
+        pointerEvents: leaving ? "none" : "auto",
+      }}
+      aria-hidden="true"
+    >
+      <div className="relative" style={{ width: 170, height: 170 }}>
+        <div
+          className="absolute inset-0"
+          style={{ animation: "orbitSpin 2.4s linear infinite" }}
+        >
+          <div
+            className="absolute rounded-full"
+            style={{
+              top: 0,
+              left: "50%",
+              width: 78,
+              height: 78,
+              marginLeft: -39,
+              background: C.pista,
+              filter: "blur(20px)",
+              opacity: 0.75,
+            }}
+          />
+        </div>
+        <div
+          className="absolute rounded-full flex items-center justify-center text-center px-3"
+          style={{
+            top: "50%",
+            left: "50%",
+            width: 120,
+            height: 120,
+            marginLeft: -60,
+            marginTop: -60,
+            background: "#fff",
+            boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+          }}
+        >
+          <span
+            key={index}
+            className="intro-word text-sm md:text-base font-semibold tracking-wide"
+            style={{ color: C.text, fontFamily: "Playfair Display, serif" }}
+          >
+            {INTRO_WORDS[index]}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------- MAIN APP ---------------------------------- */
+export default function FocusSite() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState("site"); // 'site' | 'admin'
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeService, setActiveService] = useState(SERVICES[0].id);
+  const [introDone, setIntroDone] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const d = await loadData();
+      setData(d);
+      setLoading(false);
+    })();
+  }, []);
+
+  const persist = useCallback(async (updater) => {
+    setData((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      saveData(next);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = FONTS_URL;
+    document.head.appendChild(link);
+    return () => document.head.removeChild(link);
+  }, []);
+
+  if (loading || !data) {
+    return (
+      <div style={{ background: C.bg, color: C.text, fontFamily: "Poppins, sans-serif" }} className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-sm tracking-widest uppercase" style={{ color: C.pistaDeep }}>Loading Focus…</div>
+      </div>
+    );
+  }
+
+  if (page === "admin") {
+    return (
+      <AdminPanel
+        data={data}
+        persist={persist}
+        onExit={() => setPage("site")}
+      />
+    );
+  }
+
+  return (
+    <div style={{ background: C.bg, color: C.text, fontFamily: "Poppins, sans-serif" }} className="min-h-screen">
+      {!introDone && <IntroScreen onComplete={() => setIntroDone(true)} />}
+      <style>{`
+        h1,h2,h3,h4 { font-family: 'Playfair Display', serif; }
+        ::selection { background: ${C.pista}; color: ${C.text}; }
+
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(22px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes wordUp {
+          from { opacity: 0; transform: translateY(100%); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes orbitSpin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes introWordFade {
+          0% { opacity: 0; transform: translateY(6px); }
+          18% { opacity: 1; transform: translateY(0); }
+          82% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-6px); }
+        }
+        @keyframes introOverlayOut {
+          from { opacity: 1; }
+          to { opacity: 0; visibility: hidden; }
+        }
+        @keyframes drawLine {
+          from { stroke-dashoffset: 300; }
+          to { stroke-dashoffset: 0; }
+        }
+        @keyframes pulseRing {
+          0% { box-shadow: 0 0 0 0 rgba(155, 199, 124, 0.55); }
+          100% { box-shadow: 0 0 0 18px rgba(155, 199, 124, 0); }
+        }
+        @keyframes popIn {
+          from { opacity: 0; transform: translateY(10px) scale(0.96); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .fade-up { opacity: 0; animation: fadeUp 0.7s ease forwards; }
+        .word-up-wrap { display: inline-block; overflow: hidden; vertical-align: top; }
+        .word-up { display: inline-block; opacity: 0; animation: wordUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .intro-word { animation: introWordFade 0.55s ease forwards; }
+        @media (prefers-reduced-motion: reduce) {
+          .fade-up { opacity: 1; animation: none; }
+          .word-up { opacity: 1; animation: none; }
+          .whatsapp-pulse { animation: none !important; }
+        }
+      `}</style>
+
+      {/* NAV */}
+      <header className="sticky top-0 z-40 backdrop-blur border-b" style={{ background: "rgba(255,255,255,0.9)", borderColor: C.line }}>
+        <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
+          <a href="#home" className="text-2xl tracking-wide font-semibold" style={{ fontFamily: "Playfair Display, serif" }}>
+            FOCUS
+          </a>
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
+            <a href="#home" className="hover:opacity-70">Home</a>
+            <a href="#services" className="hover:opacity-70">Services</a>
+            <a href="#portfolio" className="hover:opacity-70">Portfolio</a>
+            <a href="#testimonials" className="hover:opacity-70">Testimonials</a>
+            <a
+              href="#enquiry"
+              className="px-4 py-2 rounded-full text-sm font-semibold"
+              style={{ background: C.pista, color: C.text }}
+            >
+              Enquire Now
+            </a>
+          </nav>
+          <button className="md:hidden" onClick={() => setMenuOpen((v) => !v)} aria-label="Menu">
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+        {menuOpen && (
+          <div className="md:hidden px-5 pb-4 flex flex-col gap-3 text-sm font-medium">
+            <a href="#home" onClick={() => setMenuOpen(false)}>Home</a>
+            <a href="#services" onClick={() => setMenuOpen(false)}>Services</a>
+            <a href="#portfolio" onClick={() => setMenuOpen(false)}>Portfolio</a>
+            <a href="#testimonials" onClick={() => setMenuOpen(false)}>Testimonials</a>
+            <a href="#enquiry" onClick={() => setMenuOpen(false)}>Enquire Now</a>
+          </div>
+        )}
+      </header>
+
+      {/* HERO */}
+      <section id="home" className="max-w-6xl mx-auto px-5 pt-16 pb-10 md:pt-24 md:pb-16 overflow-hidden">
+        {introDone && (
+          <>
+            <div
+              className="fade-up flex items-center gap-2 text-xs font-semibold uppercase mb-4"
+              style={{ color: C.pistaDeep, animationDelay: "0.05s", letterSpacing: "0.2em" }}
+            >
+              <Sparkles size={14} /> Makeup · Mehendi · Sarees · Photography · Studio · Decor · Catering
+            </div>
+            <h1
+              className="text-4xl md:text-6xl font-semibold leading-tight max-w-3xl"
+              style={{ color: C.text }}
+            >
+              {["Every", "part", "of", "your", "celebration,"].map((w, i) => (
+                <span key={i} className="word-up-wrap mr-3">
+                  <span className="word-up" style={{ animationDelay: `${0.15 + i * 0.08}s` }}>{w}</span>
+                </span>
+              ))}
+              <br />
+              {["under", "one", "roof."].map((w, i) => (
+                <span key={i} className="word-up-wrap mr-3" style={{ color: C.pistaDeep }}>
+                  <span className="word-up" style={{ animationDelay: `${0.55 + i * 0.08}s`, color: C.pistaDeep }}>{w}</span>
+                </span>
+              ))}
+            </h1>
+            <p
+              className="fade-up mt-5 max-w-xl text-base md:text-lg"
+              style={{ color: C.sub, animationDelay: "0.95s" }}
+            >
+              Focus brings makeup artists, mehendi designers, saree stylists, photographers, a rentable studio,
+              decorators and caterers together — so you plan once, and we handle the rest.
+            </p>
+            <div className="fade-up mt-8 flex flex-wrap gap-4" style={{ animationDelay: "1.15s" }}>
+              <a href="#enquiry" className="px-6 py-3 rounded-full font-semibold text-sm" style={{ background: C.text, color: "#fff" }}>
+                Send an Enquiry
+              </a>
+              <a href="#services" className="px-6 py-3 rounded-full font-semibold text-sm border" style={{ borderColor: C.pistaDeep, color: C.pistaDeep }}>
+                Explore Services
+              </a>
+            </div>
+          </>
+        )}
+      </section>
+
+      {introDone && <AnimatedMehendiDivider />}
+
+      <WhatsAppWidget number={data.socials.whatsapp} />
+
+      {/* SERVICES */}
+      <section id="services" className="max-w-6xl mx-auto px-5 py-14">
+        <h2 className="text-3xl md:text-4xl font-semibold mb-2">Our Services</h2>
+        <p className="mb-8" style={{ color: C.sub }}>Tap a service to see our recent work in that space.</p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {SERVICES.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => {
+                setActiveService(s.id);
+                document.getElementById("portfolio")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="text-left rounded-2xl p-5 border transition group"
+              style={{
+                borderColor: activeService === s.id ? C.pistaDeep : C.line,
+                background: activeService === s.id ? C.pistaLight : "#fff",
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-lg font-semibold" style={{ fontFamily: "Playfair Display, serif" }}>{s.name}</span>
+                <ChevronRight size={18} style={{ color: C.pistaDeep }} className="group-hover:translate-x-1 transition" />
+              </div>
+              <p className="text-sm" style={{ color: C.sub }}>{s.blurb}</p>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <MehendiDivider />
+
+      {/* PORTFOLIO */}
+      <section id="portfolio" className="max-w-6xl mx-auto px-5 py-14">
+        <h2 className="text-3xl md:text-4xl font-semibold mb-6">Recent Work</h2>
+        <div className="flex flex-wrap gap-2 mb-8">
+          {SERVICES.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setActiveService(s.id)}
+              className="px-4 py-2 rounded-full text-sm font-medium border"
+              style={{
+                background: activeService === s.id ? C.pista : "#fff",
+                borderColor: activeService === s.id ? C.pista : C.line,
+                color: C.text,
+              }}
+            >
+              {s.tag}
+            </button>
+          ))}
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {data.projects.filter((p) => p.service === activeService).length === 0 && (
+            <p style={{ color: C.sub }}>No projects added for this service yet.</p>
+          )}
+          {data.projects.filter((p) => p.service === activeService).map((p) => (
+            <div key={p.id} className="rounded-2xl overflow-hidden border" style={{ borderColor: C.line }}>
+              <img src={p.image} alt={p.title} className="w-full h-48 object-cover" />
+              <div className="p-4">
+                <h3 className="font-semibold text-lg" style={{ fontFamily: "Playfair Display, serif" }}>{p.title}</h3>
+                <p className="text-sm mt-1" style={{ color: C.sub }}>{p.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <MehendiDivider />
+
+      {/* TESTIMONIALS */}
+      <section id="testimonials" className="max-w-6xl mx-auto px-5 py-14">
+        <h2 className="text-3xl md:text-4xl font-semibold mb-8">What Clients Say</h2>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {data.testimonials.map((t) => (
+            <div key={t.id} className="rounded-2xl p-6 border" style={{ borderColor: C.line, background: C.pistaLight }}>
+              <div className="flex gap-1 mb-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} size={16} fill={i < t.rating ? C.pistaDeep : "none"} color={C.pistaDeep} />
+                ))}
+              </div>
+              <p className="text-sm mb-4" style={{ color: C.text }}>"{t.text}"</p>
+              <p className="text-sm font-semibold">{t.name}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <MehendiDivider />
+
+      {/* ENQUIRY */}
+      <section id="enquiry" className="max-w-3xl mx-auto px-5 py-14">
+        <h2 className="text-3xl md:text-4xl font-semibold mb-2">Send an Enquiry</h2>
+        <p className="mb-8" style={{ color: C.sub }}>
+          Tell us what you need — your message goes straight to our WhatsApp.
+        </p>
+        <EnquiryForm data={data} persist={persist} />
+      </section>
+
+      {/* FOOTER */}
+      <footer className="border-t mt-10" style={{ borderColor: C.line, background: C.pistaLight }}>
+        <div className="max-w-6xl mx-auto px-5 py-12 grid sm:grid-cols-2 gap-8">
+          <div>
+            <p className="text-2xl font-semibold mb-2" style={{ fontFamily: "Playfair Display, serif" }}>FOCUS</p>
+            <p className="text-sm max-w-sm" style={{ color: C.sub }}>
+              Makeup, mehendi, sarees, photography, studio rental, decoration and catering — one team, one address.
+            </p>
+          </div>
+          <div className="flex sm:justify-end items-start gap-4">
+            <SocialIcon href={data.socials.instagram} label="Instagram"><Instagram size={20} /></SocialIcon>
+            <SocialIcon href={data.socials.facebook} label="Facebook"><Facebook size={20} /></SocialIcon>
+            <SocialIcon href={data.socials.youtube} label="YouTube"><Youtube size={20} /></SocialIcon>
+            <SocialIcon href={data.socials.whatsapp} label="WhatsApp"><MessageCircle size={20} /></SocialIcon>
+          </div>
+        </div>
+        <div className="max-w-6xl mx-auto px-5 pb-6 flex items-center justify-between text-xs" style={{ color: C.sub }}>
+          <span>© {new Date().getFullYear()} Focus. All rights reserved.</span>
+          <button onClick={() => setPage("admin")} className="opacity-40 hover:opacity-80 transition">
+            Admin
+          </button>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function SocialIcon({ href, label, children }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      className="w-10 h-10 rounded-full flex items-center justify-center border"
+      style={{ borderColor: C.pistaDeep, color: C.pistaDeep, background: "#fff" }}
+    >
+      {children}
+    </a>
+  );
+}
+
+/* ---------------------------------- ENQUIRY FORM ---------------------------------- */
+function EnquiryForm({ data, persist }) {
+  const [form, setForm] = useState({ name: "", phone: "", service: SERVICES[0].id, message: "" });
+  const [sent, setSent] = useState("");
+
+  const logEnquiry = async () => {
+    const entry = { id: `enq-${Date.now()}`, ...form, date: new Date().toISOString() };
+    await persist((prev) => ({ ...prev, enquiries: [entry, ...prev.enquiries] }));
+  };
+
+  const serviceName = () => SERVICES.find((s) => s.id === form.service)?.name || "";
+
+  const sendWhatsApp = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.phone) return;
+    await logEnquiry();
+    const text = `Hi Focus, I'm ${form.name} (${form.phone}). I'm interested in ${serviceName()}. ${form.message}`;
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, "_blank");
+    setSent("whatsapp");
+    setForm({ name: "", phone: "", service: SERVICES[0].id, message: "" });
+  };
+
+  const sendEmail = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.phone) return;
+    await logEnquiry();
+    const subject = `Enquiry: ${serviceName()}`;
+    const body = `Name: ${form.name}\nPhone: ${form.phone}\nService: ${serviceName()}\n\nMessage:\n${form.message}`;
+    window.location.href = `mailto:${data.socials.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setSent("email");
+    setForm({ name: "", phone: "", service: SERVICES[0].id, message: "" });
+  };
+
+  return (
+    <form className="space-y-4">
+      <div className="grid sm:grid-cols-2 gap-4">
+        <input
+          required
+          placeholder="Your name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          className="w-full px-4 py-3 rounded-xl border outline-none"
+          style={{ borderColor: C.line }}
+        />
+        <input
+          required
+          placeholder="Phone number"
+          value={form.phone}
+          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          className="w-full px-4 py-3 rounded-xl border outline-none"
+          style={{ borderColor: C.line }}
+        />
+      </div>
+      <select
+        value={form.service}
+        onChange={(e) => setForm({ ...form, service: e.target.value })}
+        className="w-full px-4 py-3 rounded-xl border outline-none"
+        style={{ borderColor: C.line }}
+      >
+        {SERVICES.map((s) => (
+          <option key={s.id} value={s.id}>{s.name}</option>
+        ))}
+      </select>
+      <textarea
+        placeholder="Tell us about your event..."
+        rows={4}
+        value={form.message}
+        onChange={(e) => setForm({ ...form, message: e.target.value })}
+        className="w-full px-4 py-3 rounded-xl border outline-none"
+        style={{ borderColor: C.line }}
+      />
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={sendWhatsApp}
+          className="px-6 py-3 rounded-full font-semibold text-sm flex items-center gap-2"
+          style={{ background: C.pista, color: C.text }}
+        >
+          <MessageCircle size={16} /> Send via WhatsApp
+        </button>
+        <button
+          type="button"
+          onClick={sendEmail}
+          className="px-6 py-3 rounded-full font-semibold text-sm flex items-center gap-2 border"
+          style={{ borderColor: C.pistaDeep, color: C.pistaDeep }}
+        >
+          <Mail size={16} /> Send via Email
+        </button>
+      </div>
+      {sent === "whatsapp" && <p className="text-sm" style={{ color: C.pistaDeep }}>Thanks! WhatsApp should have opened with your message ready to send.</p>}
+      {sent === "email" && <p className="text-sm" style={{ color: C.pistaDeep }}>Thanks! Your email app should have opened with your message ready to send.</p>}
+    </form>
+  );
+}
+
+/* ---------------------------------- ADMIN PANEL ---------------------------------- */
+function AdminPanel({ data, persist, onExit }) {
+  const [authed, setAuthed] = useState(false);
+  const [tab, setTab] = useState("enquiries");
+
+  if (!data.admin) {
+    return <CreateAdmin data={data} persist={persist} onDone={() => setAuthed(true)} onExit={onExit} />;
+  }
+  if (!authed) {
+    return <AdminLogin data={data} persist={persist} onSuccess={() => setAuthed(true)} onExit={onExit} />;
+  }
+
+  return (
+    <div style={{ background: C.bg, color: C.text, fontFamily: "Poppins, sans-serif" }} className="min-h-screen">
+      <div className="max-w-5xl mx-auto px-5 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-semibold" style={{ fontFamily: "Playfair Display, serif" }}>Focus Admin</h1>
+          <div className="flex gap-3">
+            <button onClick={onExit} className="text-sm px-4 py-2 rounded-full border" style={{ borderColor: C.line }}>
+              View Site
+            </button>
+            <button
+              onClick={() => setAuthed(false)}
+              className="text-sm px-4 py-2 rounded-full flex items-center gap-1"
+              style={{ background: C.text, color: "#fff" }}
+            >
+              <LogOut size={14} /> Log out
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-8">
+          {[
+            ["enquiries", "Enquiries"],
+            ["projects", "Works & Projects"],
+            ["testimonials", "Testimonials"],
+            ["socials", "Social Links"],
+            ["account", "Account"],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className="px-4 py-2 rounded-full text-sm font-medium border"
+              style={{
+                background: tab === id ? C.pista : "#fff",
+                borderColor: tab === id ? C.pista : C.line,
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "enquiries" && <EnquiriesTab data={data} />}
+        {tab === "projects" && <ProjectsTab data={data} persist={persist} />}
+        {tab === "testimonials" && <TestimonialsTab data={data} persist={persist} />}
+        {tab === "socials" && <SocialsTab data={data} persist={persist} />}
+        {tab === "account" && <AccountTab data={data} persist={persist} />}
+      </div>
+    </div>
+  );
+}
+
+function CreateAdmin({ data, persist, onDone, onExit }) {
+  const [u, setU] = useState("");
+  const [p, setP] = useState("");
+  const [p2, setP2] = useState("");
+  const [err, setErr] = useState("");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!u || !p) return setErr("Choose a username and password.");
+    if (p !== p2) return setErr("Passwords don't match.");
+    await persist((prev) => ({ ...prev, admin: { username: u.trim(), password: p } }));
+    onDone();
+  };
+
+  return (
+    <div style={{ background: C.bg }} className="min-h-screen flex items-center justify-center px-5">
+      <form onSubmit={submit} className="w-full max-w-sm p-8 rounded-2xl border" style={{ borderColor: C.line }}>
+        <div className="flex items-center gap-2 mb-1" style={{ color: C.pistaDeep }}>
+          <Lock size={18} /> <span className="text-sm font-semibold uppercase tracking-wide">First-time setup</span>
+        </div>
+        <h2 className="text-2xl font-semibold mb-1" style={{ fontFamily: "Playfair Display, serif" }}>Create the admin account</h2>
+        <p className="text-sm mb-6" style={{ color: C.sub }}>
+          This runs once. Whoever sets this up owns the only admin login going forward.
+        </p>
+        <input placeholder="Username" value={u} onChange={(e) => setU(e.target.value)} className="w-full mb-3 px-4 py-3 rounded-xl border" style={{ borderColor: C.line }} />
+        <input placeholder="Password" type="password" value={p} onChange={(e) => setP(e.target.value)} className="w-full mb-3 px-4 py-3 rounded-xl border" style={{ borderColor: C.line }} />
+        <input placeholder="Confirm password" type="password" value={p2} onChange={(e) => setP2(e.target.value)} className="w-full mb-3 px-4 py-3 rounded-xl border" style={{ borderColor: C.line }} />
+        {err && <p className="text-sm text-red-600 mb-3">{err}</p>}
+        <button type="submit" className="w-full py-3 rounded-full font-semibold" style={{ background: C.pista, color: C.text }}>
+          Create Account
+        </button>
+        <button type="button" onClick={onExit} className="w-full py-3 mt-2 text-sm" style={{ color: C.sub }}>
+          Cancel
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function AdminLogin({ data, persist, onSuccess, onExit }) {
+  const [u, setU] = useState("");
+  const [p, setP] = useState("");
+  const [err, setErr] = useState("");
+  const [confirmingReset, setConfirmingReset] = useState(false);
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (u.trim() === data.admin.username && p === data.admin.password) {
+      onSuccess();
+    } else {
+      setErr("Incorrect username or password.");
+    }
+  };
+
+  const resetAdmin = async () => {
+    await persist((prev) => ({ ...prev, admin: null }));
+  };
+
+  return (
+    <div style={{ background: C.bg }} className="min-h-screen flex items-center justify-center px-5">
+      <form onSubmit={submit} className="w-full max-w-sm p-8 rounded-2xl border" style={{ borderColor: C.line }}>
+        <div className="flex items-center gap-2 mb-4" style={{ color: C.pistaDeep }}>
+          <Lock size={18} /> <span className="text-sm font-semibold uppercase tracking-wide">Admin login</span>
+        </div>
+        <input placeholder="Username" value={u} onChange={(e) => setU(e.target.value)} className="w-full mb-3 px-4 py-3 rounded-xl border" style={{ borderColor: C.line }} />
+        <input placeholder="Password" type="password" value={p} onChange={(e) => setP(e.target.value)} className="w-full mb-3 px-4 py-3 rounded-xl border" style={{ borderColor: C.line }} />
+        {err && <p className="text-sm text-red-600 mb-3">{err}</p>}
+        <button type="submit" className="w-full py-3 rounded-full font-semibold" style={{ background: C.pista, color: C.text }}>
+          Log in
+        </button>
+        <button type="button" onClick={onExit} className="w-full py-3 mt-2 text-sm" style={{ color: C.sub }}>
+          Back to site
+        </button>
+
+        <div className="mt-6 pt-4 border-t" style={{ borderColor: C.line }}>
+          {!confirmingReset ? (
+            <button
+              type="button"
+              onClick={() => setConfirmingReset(true)}
+              className="text-xs underline"
+              style={{ color: C.sub }}
+            >
+              Forgot the login? Reset the admin account
+            </button>
+          ) : (
+            <div className="text-xs" style={{ color: C.sub }}>
+              <p className="mb-2">This clears the current admin login so you can set a brand new username and password. Anyone with this link could do this too, so only use it if you're locked out.</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={resetAdmin} className="px-3 py-1.5 rounded-full font-semibold" style={{ background: C.pista, color: C.text }}>
+                  Yes, reset it
+                </button>
+                <button type="button" onClick={() => setConfirmingReset(false)} className="px-3 py-1.5 rounded-full border" style={{ borderColor: C.line }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function EnquiriesTab({ data }) {
+  if (data.enquiries.length === 0) {
+    return <p style={{ color: C.sub }}>No enquiries yet. Submissions from the enquiry form will show up here.</p>;
+  }
+  return (
+    <div className="space-y-3">
+      {data.enquiries.map((e) => (
+        <div key={e.id} className="p-4 rounded-xl border" style={{ borderColor: C.line }}>
+          <div className="flex justify-between text-sm mb-1">
+            <span className="font-semibold">{e.name} · {e.phone}</span>
+            <span style={{ color: C.sub }}>{new Date(e.date).toLocaleString()}</span>
+          </div>
+          <p className="text-sm mb-1" style={{ color: C.pistaDeep }}>
+            {SERVICES.find((s) => s.id === e.service)?.name}
+          </p>
+          <p className="text-sm" style={{ color: C.sub }}>{e.message}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProjectsTab({ data, persist }) {
+  const [form, setForm] = useState({ service: SERVICES[0].id, title: "", image: "", desc: "" });
+
+  const addProject = async () => {
+    if (!form.title || !form.image) return;
+    const entry = { id: `proj-${Date.now()}`, ...form };
+    await persist((prev) => ({ ...prev, projects: [entry, ...prev.projects] }));
+    setForm({ service: SERVICES[0].id, title: "", image: "", desc: "" });
+  };
+  const removeProject = async (id) => {
+    await persist((prev) => ({ ...prev, projects: prev.projects.filter((p) => p.id !== id) }));
+  };
+
+  return (
+    <div>
+      <div className="p-5 rounded-xl border mb-6" style={{ borderColor: C.line, background: C.pistaLight }}>
+        <h3 className="font-semibold mb-3">Add a project</h3>
+        <div className="grid sm:grid-cols-2 gap-3 mb-3">
+          <select value={form.service} onChange={(e) => setForm({ ...form, service: e.target.value })} className="px-4 py-3 rounded-xl border" style={{ borderColor: C.line }}>
+            {SERVICES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <input placeholder="Project title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="px-4 py-3 rounded-xl border" style={{ borderColor: C.line }} />
+        </div>
+        <input placeholder="Image URL" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} className="w-full mb-3 px-4 py-3 rounded-xl border" style={{ borderColor: C.line }} />
+        <input placeholder="Short description" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} className="w-full mb-3 px-4 py-3 rounded-xl border" style={{ borderColor: C.line }} />
+        <button onClick={addProject} className="px-5 py-2 rounded-full font-semibold text-sm flex items-center gap-1" style={{ background: C.pista }}>
+          <Plus size={14} /> Add project
+        </button>
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {data.projects.map((p) => (
+          <div key={p.id} className="rounded-xl border overflow-hidden" style={{ borderColor: C.line }}>
+            <img src={p.image} alt={p.title} className="w-full h-32 object-cover" />
+            <div className="p-3">
+              <p className="text-xs font-semibold uppercase" style={{ color: C.pistaDeep }}>{SERVICES.find((s) => s.id === p.service)?.tag}</p>
+              <p className="font-medium text-sm mb-2">{p.title}</p>
+              <button onClick={() => removeProject(p.id)} className="text-xs flex items-center gap-1 text-red-600">
+                <Trash2 size={12} /> Remove
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TestimonialsTab({ data, persist }) {
+  const [form, setForm] = useState({ name: "", text: "", rating: 5 });
+
+  const addTestimonial = async () => {
+    if (!form.name || !form.text) return;
+    const entry = { id: `t-${Date.now()}`, ...form };
+    await persist((prev) => ({ ...prev, testimonials: [entry, ...prev.testimonials] }));
+    setForm({ name: "", text: "", rating: 5 });
+  };
+  const remove = async (id) => {
+    await persist((prev) => ({ ...prev, testimonials: prev.testimonials.filter((t) => t.id !== id) }));
+  };
+
+  return (
+    <div>
+      <div className="p-5 rounded-xl border mb-6" style={{ borderColor: C.line, background: C.pistaLight }}>
+        <h3 className="font-semibold mb-3">Add a testimonial</h3>
+        <input placeholder="Client name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full mb-3 px-4 py-3 rounded-xl border" style={{ borderColor: C.line }} />
+        <textarea placeholder="What did they say?" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} className="w-full mb-3 px-4 py-3 rounded-xl border" style={{ borderColor: C.line }} />
+        <select value={form.rating} onChange={(e) => setForm({ ...form, rating: Number(e.target.value) })} className="mb-3 px-4 py-3 rounded-xl border" style={{ borderColor: C.line }}>
+          {[5, 4, 3, 2, 1].map((r) => <option key={r} value={r}>{r} stars</option>)}
+        </select>
+        <button onClick={addTestimonial} className="block px-5 py-2 rounded-full font-semibold text-sm flex items-center gap-1" style={{ background: C.pista }}>
+          <Plus size={14} /> Add testimonial
+        </button>
+      </div>
+      <div className="space-y-3">
+        {data.testimonials.map((t) => (
+          <div key={t.id} className="p-4 rounded-xl border flex justify-between items-start" style={{ borderColor: C.line }}>
+            <div>
+              <p className="font-semibold text-sm">{t.name} · {t.rating}★</p>
+              <p className="text-sm" style={{ color: C.sub }}>{t.text}</p>
+            </div>
+            <button onClick={() => remove(t.id)} className="text-red-600"><Trash2 size={16} /></button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SocialsTab({ data, persist }) {
+  const [form, setForm] = useState(data.socials);
+  const save = async () => {
+    await persist((prev) => ({ ...prev, socials: form }));
+  };
+  return (
+    <div className="max-w-md space-y-3">
+      {["instagram", "facebook", "youtube", "whatsapp", "email"].map((key) => (
+        <div key={key}>
+          <label className="text-xs uppercase font-semibold" style={{ color: C.pistaDeep }}>{key}</label>
+          <input
+            value={form[key]}
+            onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+            className="w-full mt-1 px-4 py-3 rounded-xl border"
+            style={{ borderColor: C.line }}
+          />
+        </div>
+      ))}
+      <button onClick={save} className="px-5 py-2 rounded-full font-semibold text-sm flex items-center gap-1" style={{ background: C.pista }}>
+        <Save size={14} /> Save links
+      </button>
+    </div>
+  );
+}
+
+function AccountTab({ data, persist }) {
+  const [u, setU] = useState(data.admin.username);
+  const [p, setP] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const save = async () => {
+    await persist((prev) => ({ ...prev, admin: { username: u, password: p || prev.admin.password } }));
+    setSaved(true);
+    setP("");
+  };
+
+  return (
+    <div className="max-w-md space-y-3">
+      <div>
+        <label className="text-xs uppercase font-semibold" style={{ color: C.pistaDeep }}>Username</label>
+        <input value={u} onChange={(e) => setU(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl border" style={{ borderColor: C.line }} />
+      </div>
+      <div>
+        <label className="text-xs uppercase font-semibold" style={{ color: C.pistaDeep }}>New password (leave blank to keep current)</label>
+        <input type="password" value={p} onChange={(e) => setP(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl border" style={{ borderColor: C.line }} />
+      </div>
+      <button onClick={save} className="px-5 py-2 rounded-full font-semibold text-sm flex items-center gap-1" style={{ background: C.pista }}>
+        <Pencil size={14} /> Update account
+      </button>
+      {saved && <p className="text-sm" style={{ color: C.pistaDeep }}>Account updated.</p>}
+    </div>
+  );
+}
